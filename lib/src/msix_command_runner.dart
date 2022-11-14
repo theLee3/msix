@@ -58,7 +58,11 @@ var msixCommandRunner = CommandRunner(
   ..argParser.addOption('architecture',
       help: 'Describes the architecture of the code in the package.',
       allowed: ['x64', 'x86']) // TODO: i deleted "abbr: 'h'"!!!
-
+  ..argParser.addOption(
+    'split-debug-info',
+    help: 'Folder where debug symbols should be stored',
+    valueHelp: 'C:\\debug-symbols\\windows',
+  )
   ..argParser.addSeparator('Global flags:')
   ..argParser.addMultiOption('capabilities',
       abbr: 'e',
@@ -91,6 +95,10 @@ var msixCommandRunner = CommandRunner(
   ..argParser.addFlag('release',
       help:
           'Create MSIX from the release build files (\\build\\windows\\runner\\release), release is the default.')
+  ..argParser.addFlag(
+    'obfuscate',
+    help: 'Obfuscate Dart code when building in release mode',
+  )
   ..argParser.addFlag('no-sign-msix',
       help: 'Don\'t sign the msix file.', negatable: false)
   ..argParser.addFlag('no-install-certificate',

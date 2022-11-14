@@ -1,13 +1,14 @@
 import 'dart:io';
+
 import 'package:args/args.dart';
 import 'package:cli_util/cli_logging.dart';
 import 'package:get_it/get_it.dart';
 import 'package:msix/src/configuration/commands.dart';
-import 'package:args/command_runner.dart';
 import 'package:package_config/package_config.dart';
 import 'package:path/path.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:yaml/yaml.dart';
+
 import '../command_line_converter.dart';
 import '../method_extensions.dart';
 import 'config_type.dart';
@@ -43,6 +44,7 @@ class Configuration {
   String? outputPath;
   String? outputName;
   String? publishFolderPath;
+  String? debugSymbolsDirectory;
   int hoursBetweenUpdateChecks = 0;
   bool automaticBackgroundTask = false;
   bool updateBlocksActivation = false;
@@ -55,6 +57,7 @@ class Configuration {
   bool noTrimLogo = false;
   bool createWithDebugBuildFiles = false;
   bool enableAtStartup = false;
+  bool obfuscate = false;
   late List<String> appUriHandlerHosts;
   late List<String> languages;
   String get defaultsIconsFolderPath => '$msixAssetsPath/icons';
@@ -138,6 +141,10 @@ class Configuration {
     if (createWithDebugBuildFiles) {
       buildFilesFolder = buildFilesFolder.replaceFirst('Release', 'Debug');
     }
+    obfuscate = _args.wasParsed('obfusate') ||
+        yaml['obfuscate']?.toString().toLowerCase() == 'true';
+    debugSymbolsDirectory =
+        _args['split-debug-info'] ?? yaml['split_debug_info']?.toString();
     displayName = _args['display-name'] ?? yaml['display_name'];
     publisherName =
         _args['publisher-display-name'] ?? yaml['publisher_display_name'];
@@ -264,6 +271,14 @@ class Configuration {
       throw '"publisher display name" is too long, it should be less than 256 characters';
     }
 
+    if (!createWithDebugBuildFiles &&
+        obfuscate &&
+        debugSymbolsDirectory.isNullOrEmpty) {
+      _logger.stderr(
+          'When building with --obfuscate, --split-debug-info must be provided.');
+      throw 'Provide a directory in which to store debug symbols via "msix_config: split_debug_info" in the pubspec.yaml file';
+    }
+
     if (!certificatePath.isNull || signToolOptions.isNotEmpty || store) {
       if (!certificatePath.isNull) {
         if (!(await File(certificatePath!).exists())) {
@@ -329,8 +344,7 @@ class Configuration {
     Package msixPackage =
         packagesConfig.packages.firstWhere((package) => package.name == "msix");
     String path =
-        msixPackage.packageUriRoot.toString().replaceAll('file:///', '') +
-            'assets';
+        '${msixPackage.packageUriRoot.toString().replaceAll('file:///', '')}assets';
 
     msixAssetsPath = Uri.decodeFull(path);
   }
